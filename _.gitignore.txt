@@ -1,0 +1,29 @@
+# Ruby / Bundler
+/.bundle/
+/vendor/bundle
+Gemfile.lock
+
+# Environment
+.env
+*.env.local
+
+# Database (don't commit the SQLite file; commit schema only)
+db/*.sqlite3
+db/*.sqlite3-shm
+db/*.sqlite3-wal
+
+# JSON data (also excluded from VCS — generated at runtime)
+ocorrencias.json
+
+# Logs
+*.log
+log/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temp
+tmp/
