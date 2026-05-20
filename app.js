@@ -106,7 +106,7 @@ $('modalBackdrop').onclick = (e) => { if (e.target === $('modalBackdrop')) Modal
 
 // ── Router ─────────────────────────────────────────────────────────────────
 const PAGE_TITLES = {
-  dashboard:   'Ocorrências AFS',
+  dashboard:   'Menu de Registro',
   nova:        'Nova Ocorrência',
   editar:      'Editar Ocorrência',
   ocorrencias: 'Ocorrências',
