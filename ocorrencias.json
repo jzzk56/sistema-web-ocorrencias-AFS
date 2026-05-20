@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "id": 1,
+    "nome_aluno": "João Levy da Silva",
+    "curso": "Informática",
+    "ano": "2º Ano",
+    "data_ocorrencia": "2026-05-20",
+    "descricao": "O cara dormiu a aula inteira",
+    "gravidade": "Leve",
+    "created_at": "2026-05-20T23:36:01+00:00",
+    "updated_at": "2026-05-20T23:36:01+00:00"
+  }
+]

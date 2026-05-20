@@ -106,7 +106,7 @@ $('modalBackdrop').onclick = (e) => { if (e.target === $('modalBackdrop')) Modal
 
 // ── Router ─────────────────────────────────────────────────────────────────
 const PAGE_TITLES = {
-  dashboard:   'Dashboard',
+  dashboard:   'AFS Occurrence (Ocorrência AFS)',
   nova:        'Nova Ocorrência',
   editar:      'Editar Ocorrência',
   ocorrencias: 'Ocorrências',
@@ -158,7 +158,7 @@ function cursoAno(row) { return `${row.curso} · ${row.ano}`; }
 async function dashboard() {
   const wrap = el('div', 'fade-in');
   wrap.innerHTML = `
-    <div class="page-heading"><div><h1>Dashboard</h1><p>Visão geral das ocorrências registradas.</p></div></div>
+    <div class="page-heading"><div><h1>AFS Occurrence (Ocorrência AFS)</h1><p>Visão geral das ocorrências registradas.</p></div></div>
     <div class="stats-grid" id="statsGrid">
       ${loadingCard()} ${loadingCard()} ${loadingCard()} ${loadingCard()}
     </div>
