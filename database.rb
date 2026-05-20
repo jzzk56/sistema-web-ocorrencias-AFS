@@ -7,7 +7,10 @@ require 'fileutils'
 require 'time'
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-DB_PATH   = ENV.fetch('DATABASE_URL', 'db/ocorrencias.sqlite3')
+# Use a local SQLite file. If DATABASE_URL is set to a postgres:// URL by the
+# runtime, we ignore it and fall back to the local SQLite path.
+_db_url = ENV.fetch('DATABASE_URL', 'db/ocorrencias.sqlite3')
+DB_PATH = _db_url.start_with?('postgres') ? 'db/ocorrencias.sqlite3' : _db_url
 JSON_PATH = ENV.fetch('JSON_PATH', 'ocorrencias.json')
 
 FileUtils.mkdir_p(File.dirname(DB_PATH))

@@ -63,7 +63,7 @@ helpers do
     errors << 'Data da ocorrência é obrigatória.' if data.empty?
     if data.match?(/\A\d{4}-\d{2}-\d{2}\z/)
       begin; Date.parse(data); rescue ArgumentError; errors << 'Data da ocorrência inválida.'; end
-    elsif data.present? rescue nil
+    elsif !data.empty?
       errors << 'Data deve estar no formato AAAA-MM-DD.'
     end
 
