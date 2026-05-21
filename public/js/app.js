@@ -118,7 +118,8 @@ const PAGE_TITLES = {
 function navigate(page, opts = {}) {
   S.page   = page;
   S.editId = opts.id || null;
-  window.location.hash = page + (opts.id ? `/${opts.id}` : '');
+  const hash = '#' + page + (opts.id ? `/${opts.id}` : '');
+  if (window.location.hash !== hash) history.pushState(null, '', hash);
   renderPage();
 }
 
