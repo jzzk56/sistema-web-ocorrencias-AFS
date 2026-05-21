@@ -1,24 +1,15 @@
 [
   {
-    "id": 1,
-    "nome_aluno": "João Levy da Silva",
-    "curso": "Informática",
-    "ano": "2º Ano",
-    "data_ocorrencia": "2026-05-20",
-    "descricao": "O cara dormiu a aula inteira",
-    "gravidade": "Leve",
-    "created_at": "2026-05-20T23:36:01+00:00",
-    "updated_at": "2026-05-20T23:36:01+00:00"
-  },
-  {
-    "id": 2,
-    "nome_aluno": "Melyssa",
+    "id": 4,
+    "nome_aluno": "Janderson Gouveia",
     "curso": "Informática",
     "ano": "2º Ano",
     "data_ocorrencia": "2026-05-21",
-    "descricao": "Bateu no professor",
-    "gravidade": "Grave",
-    "created_at": "2026-05-21T15:38:27+00:00",
-    "updated_at": "2026-05-21T15:38:27+00:00"
+    "descricao": "O aluno se estressou e jogou a cadeira na cabeça do amiguinho.",
+    "gravidade": "Média",
+    "created_at": "2026-05-21T16:14:47+00:00",
+    "updated_at": "2026-05-21T16:14:48+00:00",
+    "matricula": "2025001",
+    "foto_path": "/uploads/aluno_4_1779380088.jpg"
   }
 ]

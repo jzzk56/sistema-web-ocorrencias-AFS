@@ -512,7 +512,7 @@ async function formPage(id) {
       </div>
       <div class="form-actions">
         <button class="btn btn-ghost"   onclick="navigate('ocorrencias')">Cancelar</button>
-        <button class="btn btn-primary" id="submitBtn" onclick="submitForm(${id || 'null'})">
+        <button class="btn btn-primary" id="submitBtn" onclick="submitForm(${id || 0})">
           ${id ? 'Salvar alterações' : 'Registrar ocorrência'}
         </button>
       </div>
