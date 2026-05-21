@@ -23,17 +23,24 @@ DB.run('PRAGMA foreign_keys=ON')
 DB.create_table?(:ocorrencias) do
   primary_key :id
   String   :nome_aluno,      null: false, size: 255
+  String   :matricula,       size: 30
   String   :curso,           null: false, size: 100
   String   :ano,             null: false, size: 20
   String   :data_ocorrencia, null: false, size: 10
   Text     :descricao,       null: false
   String   :gravidade,       null: false, size: 10
+  String   :foto_path,       size: 500
   DateTime :created_at
   DateTime :updated_at
   index [:curso, :ano]
   index [:nome_aluno]
   index [:gravidade]
 end
+
+# → Migração de colunas (para tabelas já existentes)
+existing = DB.schema(:ocorrencias).map(&:first)
+DB.alter_table(:ocorrencias) { add_column :matricula,  String, size: 30  } unless existing.include?(:matricula)
+DB.alter_table(:ocorrencias) { add_column :foto_path,  String, size: 500 } unless existing.include?(:foto_path)
 
 # → Sincronização JSON
 module JsonSync

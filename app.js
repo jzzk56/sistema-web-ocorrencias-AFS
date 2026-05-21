@@ -46,13 +46,20 @@ const API = {
   create(body)      { return this.req('POST', '/ocorrencias', body).then(r => r.data); },
   update(id, body)  { return this.req('PUT', `/ocorrencias/${id}`, body).then(r => r.data); },
   remove(id)        { return this.req('DELETE', `/ocorrencias/${id}`).then(r => r.data); },
+
+  async uploadFoto(id, file) {
+    const fd = new FormData();
+    fd.append('foto', file);
+    const res  = await fetch(`/api/ocorrencias/${id}/foto`, { method: 'POST', body: fd });
+    return res.json().catch(() => ({}));
+  },
 };
 
 // → DOM
 const $  = id => document.getElementById(id);
 const el = (tag, cls, html) => {
   const e = document.createElement(tag);
-  if (cls)              e.className = cls;
+  if (cls)               e.className = cls;
   if (html !== undefined) e.innerHTML = html;
   return e;
 };
@@ -105,6 +112,7 @@ const PAGE_TITLES = {
   nova:        'Nova Ocorrência',
   editar:      'Editar Ocorrência',
   ocorrencias: 'Ocorrências',
+  changelog:   'Histórico Git',
 };
 
 function navigate(page, opts = {}) {
@@ -115,7 +123,7 @@ function navigate(page, opts = {}) {
 }
 
 function renderPage() {
-  const pages = { dashboard, nova, ocorrencias, editar };
+  const pages = { dashboard, nova, ocorrencias, editar, changelog };
   const fn    = pages[S.page] || dashboard;
 
   document.querySelectorAll('.nav-item').forEach(a => {
@@ -140,8 +148,14 @@ function badgeHtml(g) {
   return `<span class="badge badge-${cls}">${g}</span>`;
 }
 
-function gravityColor(g) {
-  return { Leve: '#22c55e', Média: '#f59e0b', Grave: '#ef4444' }[g] || '#6b7280';
+function initials(name) {
+  return (name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+}
+
+function avatarHtml(r, cls = 'occ-avatar') {
+  return r.foto_path
+    ? `<img src="${r.foto_path}" class="${cls}" alt="${escHtml(r.nome_aluno)}" />`
+    : `<div class="${cls.replace('occ-avatar', 'occ-avatar-placeholder').replace('table-avatar', 'table-avatar-placeholder')}">${initials(r.nome_aluno)}</div>`;
 }
 
 function cursoAno(row) { return `${row.curso} · ${row.ano}`; }
@@ -166,7 +180,9 @@ function loadingCard() {
 async function dashboard() {
   const wrap = el('div', 'fade-in');
   wrap.innerHTML = `
-    <div class="page-heading"><div><h1>Ocorrências AFS</h1><p>Visão geral das ocorrências registradas.</p></div></div>
+    <div class="page-heading">
+      <div><h1>Ocorrências AFS</h1><p>Visão geral das ocorrências registradas.</p></div>
+    </div>
     <div class="stats-grid" id="statsGrid">
       ${loadingCard()} ${loadingCard()} ${loadingCard()} ${loadingCard()}
     </div>
@@ -197,10 +213,10 @@ function renderStats(s) {
   const total = s.total;
   const pg    = s.por_gravidade;
   const items = [
-    { label: 'Total de ocorrências', value: total,              sub: 'registros',                                                                              cls: '' },
-    { label: 'Leve',                 value: pg.Leve   || 0,    sub: `${total ? Math.round(((pg.Leve||0)          / total) * 100) : 0}% do total`, cls: 'leve' },
-    { label: 'Média',                value: pg['Média'] || 0,  sub: `${total ? Math.round(((pg['Média']||0)      / total) * 100) : 0}% do total`, cls: 'media' },
-    { label: 'Grave',                value: pg.Grave  || 0,    sub: `${total ? Math.round(((pg.Grave||0)         / total) * 100) : 0}% do total`, cls: 'grave' },
+    { label: 'Total de ocorrências', value: total,            sub: 'registros',                                                                         cls: '' },
+    { label: 'Leve',   value: pg.Leve      || 0,  sub: `${total ? Math.round(((pg.Leve||0)       / total) * 100) : 0}% do total`, cls: 'leve' },
+    { label: 'Média',  value: pg['Média']  || 0,  sub: `${total ? Math.round(((pg['Média']||0)   / total) * 100) : 0}% do total`, cls: 'media' },
+    { label: 'Grave',  value: pg.Grave     || 0,  sub: `${total ? Math.round(((pg.Grave||0)      / total) * 100) : 0}% do total`, cls: 'grave' },
   ];
   $('statsGrid').innerHTML = items.map(i => `
     <div class="stat-card ${i.cls}">
@@ -218,8 +234,9 @@ function renderRecent(rows) {
   }
   body.innerHTML = `<div class="occ-list">${rows.map(r => `
     <div class="occ-row" onclick='showDetail(${r.id})'>
+      ${avatarHtml(r, 'occ-avatar')}
       <div>
-        <div class="occ-name">${r.nome_aluno}</div>
+        <div class="occ-name">${escHtml(r.nome_aluno)}</div>
         <div class="occ-meta">${cursoAno(r)} · ${fmtDate(r.data_ocorrencia)}</div>
       </div>
       ${badgeHtml(r.gravidade)}
@@ -316,15 +333,16 @@ async function loadTable() {
     body.innerHTML = `
       <table>
         <thead>
-          <tr><th>#</th><th>Aluno</th><th>Turma</th><th>Data</th><th>Gravidade</th><th>Descrição</th><th></th></tr>
+          <tr><th></th><th>Aluno</th><th>Matrícula</th><th>Turma</th><th>Data</th><th>Gravidade</th><th>Descrição</th><th></th></tr>
         </thead>
         <tbody>
           ${rows.map(r => `
           <tr onclick="showDetail(${r.id})">
-            <td data-label="ID">${r.id}</td>
-            <td data-label="Aluno" class="td-name">${escHtml(r.nome_aluno)}</td>
+            <td class="td-avatar" data-label="">${avatarHtml(r, 'table-avatar')}</td>
+            <td data-label="Aluno"     class="td-name">${escHtml(r.nome_aluno)}</td>
+            <td data-label="Matrícula" class="td-matr">${escHtml(r.matricula || '—')}</td>
             <td data-label="Turma">${escHtml(r.curso)} · ${escHtml(r.ano)}</td>
-            <td data-label="Data" class="td-date">${fmtDate(r.data_ocorrencia)}</td>
+            <td data-label="Data"      class="td-date">${fmtDate(r.data_ocorrencia)}</td>
             <td data-label="Gravidade">${badgeHtml(r.gravidade)}</td>
             <td data-label="Descrição" class="td-desc">${escHtml(r.descricao)}</td>
             <td class="td-actions" onclick="event.stopPropagation()">
@@ -388,8 +406,8 @@ async function nova()   { await formPage(null); }
 async function editar() { await formPage(S.editId); }
 
 async function formPage(id) {
-  const meta    = await ensureMeta();
-  let defaults  = {};
+  const meta   = await ensureMeta();
+  let defaults = {};
 
   if (id) {
     try { defaults = await API.getOcorrencia(id); }
@@ -405,12 +423,22 @@ async function formPage(id) {
         <p>${id ? `Atualizando registro #${id}` : 'Preencha todos os campos obrigatórios.'}</p>
       </div>
       <div class="form-body">
-        <div class="field">
-          <label>Nome completo do aluno *</label>
-          <input type="text" id="fNome" placeholder="Ex.: Maria da Silva" maxlength="255"
-                 value="${escHtml(v.nome_aluno || '')}" />
-          <span class="field-error" id="errNome"></span>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Nome completo do aluno *</label>
+            <input type="text" id="fNome" placeholder="Ex.: Maria da Silva" maxlength="255"
+                   value="${escHtml(v.nome_aluno || '')}" />
+            <span class="field-error" id="errNome"></span>
+          </div>
+          <div class="field">
+            <label>Número de matrícula *</label>
+            <input type="text" id="fMatricula" placeholder="Ex.: 2024001" maxlength="30"
+                   value="${escHtml(v.matricula || '')}" />
+            <span class="field-error" id="errMatricula"></span>
+          </div>
         </div>
+
         <div class="field-row">
           <div class="field">
             <label>Curso *</label>
@@ -429,6 +457,7 @@ async function formPage(id) {
             <span class="field-error" id="errAno"></span>
           </div>
         </div>
+
         <div class="field" style="max-width:220px">
           <label>Data da ocorrência *</label>
           <input type="date" id="fData"
@@ -436,6 +465,7 @@ async function formPage(id) {
                  max="${todayISO()}" />
           <span class="field-error" id="errData"></span>
         </div>
+
         <div class="field">
           <label>Gravidade *</label>
           <div class="gravity-pills">
@@ -450,12 +480,34 @@ async function formPage(id) {
           </div>
           <span class="field-error" id="errGravidade"></span>
         </div>
+
+        <div class="field">
+          <label>Foto do aluno (PNG, JPG)</label>
+          <div class="foto-zone" id="fotoZone">
+            <input type="file" id="fFoto" accept=".png,.jpg,.jpeg" />
+            <div class="foto-zone-label" id="fotoLabel">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/>
+                <path d="M8 5l1.5-2h5L16 5" stroke-linecap="round"/>
+              </svg>
+              ${v.foto_path
+                ? `<div class="foto-preview-wrap">
+                    <img src="${v.foto_path}" class="foto-preview-img" />
+                    <div class="foto-preview-name">Foto atual — clique para trocar</div>
+                   </div>`
+                : 'Clique ou arraste uma foto'}
+            </div>
+          </div>
+          <span class="field-error" id="errFoto"></span>
+        </div>
+
         <div class="field">
           <label>Descrição detalhada *</label>
           <textarea id="fDesc" placeholder="Descreva o ocorrido com detalhes…" maxlength="2000"
                     rows="5">${escHtml(v.descricao || '')}</textarea>
           <span class="field-error" id="errDesc"></span>
         </div>
+
       </div>
       <div class="form-actions">
         <button class="btn btn-ghost"   onclick="navigate('ocorrencias')">Cancelar</button>
@@ -466,22 +518,36 @@ async function formPage(id) {
     </div>`;
 
   $('page').appendChild(wrap);
+
+  $('fFoto').addEventListener('change', () => {
+    const file = $('fFoto').files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    $('fotoLabel').innerHTML = `
+      <div class="foto-preview-wrap">
+        <img src="${url}" class="foto-preview-img" />
+        <div class="foto-preview-name">${escHtml(file.name)}</div>
+      </div>`;
+    $('fotoZone').classList.add('has-photo');
+  });
 }
 
 async function submitForm(id) {
-  ['Nome', 'Curso', 'Ano', 'Data', 'Gravidade', 'Desc'].forEach(k => {
+  ['Nome', 'Matricula', 'Curso', 'Ano', 'Data', 'Gravidade', 'Desc'].forEach(k => {
     const e = $('err' + k); if (e) e.textContent = '';
   });
-  ['fNome', 'fCursoForm', 'fAnoForm', 'fData', 'fDesc'].forEach(fid => {
+  ['fNome', 'fMatricula', 'fCursoForm', 'fAnoForm', 'fData', 'fDesc'].forEach(fid => {
     const e = $(fid); if (e) e.classList.remove('error');
   });
 
-  const nome  = $('fNome')?.value.trim();
-  const curso = $('fCursoForm')?.value;
-  const ano   = $('fAnoForm')?.value;
-  const data  = $('fData')?.value;
-  const desc  = $('fDesc')?.value.trim();
-  const grav  = document.querySelector('input[name="gravidade"]:checked')?.value;
+  const nome      = $('fNome')?.value.trim();
+  const matricula = $('fMatricula')?.value.trim();
+  const curso     = $('fCursoForm')?.value;
+  const ano       = $('fAnoForm')?.value;
+  const data      = $('fData')?.value;
+  const desc      = $('fDesc')?.value.trim();
+  const grav      = document.querySelector('input[name="gravidade"]:checked')?.value;
+  const fotoFile  = $('fFoto')?.files?.[0];
 
   let valid = true;
 
@@ -489,9 +555,13 @@ async function submitForm(id) {
     $('errNome').textContent = nome ? 'Nome deve ter ao menos 3 caracteres.' : 'Nome é obrigatório.';
     $('fNome').classList.add('error'); valid = false;
   }
-  if (!curso) { $('errCurso').textContent    = 'Selecione um curso.';      $('fCursoForm').classList.add('error'); valid = false; }
-  if (!ano)   { $('errAno').textContent      = 'Selecione o ano.';         $('fAnoForm').classList.add('error');   valid = false; }
-  if (!data)  { $('errData').textContent     = 'Data é obrigatória.';      $('fData').classList.add('error');      valid = false; }
+  if (!matricula) {
+    $('errMatricula').textContent = 'Matrícula é obrigatória.';
+    $('fMatricula').classList.add('error'); valid = false;
+  }
+  if (!curso) { $('errCurso').textContent     = 'Selecione um curso.';     $('fCursoForm').classList.add('error'); valid = false; }
+  if (!ano)   { $('errAno').textContent       = 'Selecione o ano.';        $('fAnoForm').classList.add('error');   valid = false; }
+  if (!data)  { $('errData').textContent      = 'Data é obrigatória.';     $('fData').classList.add('error');      valid = false; }
   if (!grav)  { $('errGravidade').textContent = 'Selecione a gravidade.';  valid = false; }
   if (!desc || desc.length < 10) {
     $('errDesc').textContent = desc ? 'Descrição muito curta (mínimo 10 caracteres).' : 'Descrição é obrigatória.';
@@ -504,16 +574,22 @@ async function submitForm(id) {
   btn.disabled    = true;
   btn.textContent = id ? 'Salvando…' : 'Registrando…';
 
-  const body = { nome_aluno: nome, curso, ano, data_ocorrencia: data, descricao: desc, gravidade: grav };
+  const body = { nome_aluno: nome, matricula, curso, ano, data_ocorrencia: data, descricao: desc, gravidade: grav };
 
   try {
+    let saved;
     if (id) {
-      await API.update(id, body);
+      saved = await API.update(id, body);
       Toast.show('Ocorrência atualizada com sucesso!', 'success');
     } else {
-      await API.create(body);
+      saved = await API.create(body);
       Toast.show('Ocorrência registrada com sucesso!', 'success');
     }
+
+    if (fotoFile) {
+      await API.uploadFoto(saved.id, fotoFile);
+    }
+
     navigate('ocorrencias');
   } catch (err) {
     btn.disabled    = false;
@@ -530,22 +606,29 @@ async function showDetail(id) {
     const r = await API.getOcorrencia(id);
     $('modalTitle').textContent = r.nome_aluno;
     $('modalBody').innerHTML = `
-      <div class="detail-grid">
-        <div class="detail-item"><label>Curso</label><span>${escHtml(r.curso)}</span></div>
-        <div class="detail-item"><label>Ano</label><span>${escHtml(r.ano)}</span></div>
-        <div class="detail-item"><label>Data</label><span>${fmtDate(r.data_ocorrencia)}</span></div>
-        <div class="detail-item"><label>Gravidade</label>${badgeHtml(r.gravidade)}</div>
-        <div class="detail-item"><label>Registrado em</label><span>${fmtDate(r.created_at)}</span></div>
-        ${r.updated_at ? `<div class="detail-item"><label>Atualizado em</label><span>${fmtDate(r.updated_at)}</span></div>` : ''}
+      <div class="detail-top">
+        <div class="detail-grid">
+          <div class="detail-item"><label>Matrícula</label><span>${escHtml(r.matricula || '—')}</span></div>
+          <div class="detail-item"><label>Gravidade</label>${badgeHtml(r.gravidade)}</div>
+          <div class="detail-item"><label>Curso</label><span>${escHtml(r.curso)}</span></div>
+          <div class="detail-item"><label>Ano</label><span>${escHtml(r.ano)}</span></div>
+          <div class="detail-item"><label>Data</label><span>${fmtDate(r.data_ocorrencia)}</span></div>
+          <div class="detail-item"><label>Registrado em</label><span>${fmtDate(r.created_at)}</span></div>
+        </div>
+        ${r.foto_path ? `
+        <div class="detail-photo">
+          <img src="${r.foto_path}" alt="${escHtml(r.nome_aluno)}" />
+          <span class="detail-photo-label">Foto do aluno</span>
+        </div>` : ''}
       </div>
       <div class="detail-item detail-desc">
         <label>Descrição</label>
         <p>${escHtml(r.descricao)}</p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-ghost"   onclick="Modal.close()">Fechar</button>
-        <button class="btn btn-ghost"   onclick="Modal.close();navigate('editar',{id:${r.id}})">Editar</button>
-        <button class="btn btn-danger"  onclick="Modal.close();deleteOcorrencia(${r.id})">Excluir</button>
+        <button class="btn btn-ghost"  onclick="Modal.close()">Fechar</button>
+        <button class="btn btn-ghost"  onclick="Modal.close();navigate('editar',{id:${r.id}})">Editar</button>
+        <button class="btn btn-danger" onclick="Modal.close();deleteOcorrencia(${r.id})">Excluir</button>
       </div>`;
   } catch {
     $('modalBody').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><h3>Erro ao carregar</h3></div>`;
@@ -563,6 +646,36 @@ async function deleteOcorrencia(id) {
     else navigate('dashboard');
   } catch {
     Toast.show('Erro ao excluir.', 'error');
+  }
+}
+
+// → Página: Histórico Git
+async function changelog() {
+  const wrap = el('div', 'fade-in');
+  wrap.innerHTML = `
+    <div class="page-heading">
+      <div><h1>Histórico Git</h1><p>Alterações registradas no repositório.</p></div>
+    </div>
+    <div class="card"><div class="card-body">${loading()}</div></div>`;
+  $('page').appendChild(wrap);
+
+  try {
+    const commits = await fetch('/api/changelog').then(r => r.json());
+    const body    = wrap.querySelector('.card-body');
+    if (!commits?.length) { body.innerHTML = `<div class="empty"><h3>Nenhum commit encontrado.</h3></div>`; return; }
+
+    body.innerHTML = `<div class="occ-list">${commits.map(c => `
+      <div class="occ-row" style="cursor:default">
+        <div class="occ-avatar-placeholder" style="font-size:.6rem;font-family:monospace;border-radius:6px;width:44px;height:28px">
+          ${escHtml(c.short)}
+        </div>
+        <div>
+          <div class="occ-name">${escHtml(c.message)}</div>
+          <div class="occ-meta">${escHtml(c.author)} · ${escHtml(c.date)}</div>
+        </div>
+      </div>`).join('')}</div>`;
+  } catch {
+    Toast.show('Erro ao carregar histórico.', 'error');
   }
 }
 
@@ -598,7 +711,7 @@ function parseHash() {
   const hash  = window.location.hash.replace('#', '').split('/');
   const page  = hash[0] || 'dashboard';
   const id    = hash[1] || null;
-  const VALID = ['dashboard', 'nova', 'ocorrencias', 'editar'];
+  const VALID = ['dashboard', 'nova', 'ocorrencias', 'editar', 'changelog'];
   S.page   = VALID.includes(page) ? page : 'dashboard';
   S.editId = id;
 }

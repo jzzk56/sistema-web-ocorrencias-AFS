@@ -94,6 +94,27 @@ helpers do
     }
     row_or_rows.is_a?(Array) ? row_or_rows.map(&serialise) : serialise.call(row_or_rows)
   end
+
+  def save_foto!(id, foto_param)
+    return unless foto_param&.dig(:filename)
+
+    ext = File.extname(foto_param[:filename].to_s).downcase
+    halt 422, json(error: 'Formato inválido. Use PNG, JPG ou JPEG.') \
+      unless %w[.png .jpg .jpeg].include?(ext)
+
+    uploads_dir = File.join(__dir__, 'public', 'uploads')
+    FileUtils.mkdir_p(uploads_dir)
+
+    record = DB[:ocorrencias].first(id: id.to_i)
+    if record&.dig(:foto_path)
+      old = File.join(__dir__, 'public', record[:foto_path])
+      File.delete(old) rescue nil
+    end
+
+    filename = "aluno_#{id}_#{Time.now.to_i}#{ext}"
+    FileUtils.cp(foto_param[:tempfile].path, File.join(uploads_dir, filename))
+    "/uploads/#{filename}"
+  end
 end
 
 # → Rotas — SPA
@@ -132,6 +153,7 @@ post '/api/ocorrencias' do
   now = Time.now
   id  = DB[:ocorrencias].insert(
     nome_aluno:      data[:nome_aluno].strip,
+    matricula:       data[:matricula]&.strip,
     curso:           data[:curso],
     ano:             data[:ano],
     data_ocorrencia: data[:data_ocorrencia],
@@ -154,6 +176,7 @@ put '/api/ocorrencias/:id' do
 
   DB[:ocorrencias].where(id: params[:id].to_i).update(
     nome_aluno:      data[:nome_aluno].strip,
+    matricula:       data[:matricula]&.strip,
     curso:           data[:curso],
     ano:             data[:ano],
     data_ocorrencia: data[:data_ocorrencia],
@@ -172,7 +195,7 @@ patch '/api/ocorrencias/:id' do
   data    = json_body
   updates = {}
 
-  %i[nome_aluno curso ano data_ocorrencia descricao gravidade].each do |field|
+  %i[nome_aluno matricula curso ano data_ocorrencia descricao gravidade].each do |field|
     updates[field] = data[field].is_a?(String) ? data[field].strip : data[field] if data.key?(field)
   end
   updates[:updated_at] = Time.now
@@ -184,10 +207,28 @@ end
 
 delete '/api/ocorrencias/:id' do
   content_type :json
-  find_ocorrencia!(params[:id])
+  record = find_ocorrencia!(params[:id])
+
+  if record[:foto_path]
+    old = File.join(__dir__, 'public', record[:foto_path])
+    File.delete(old) rescue nil
+  end
+
   DB[:ocorrencias].where(id: params[:id].to_i).delete
   JsonSync.write!
   json message: 'Ocorrência excluída com sucesso.', id: params[:id].to_i
+end
+
+# → Rotas — Upload de foto
+post '/api/ocorrencias/:id/foto' do
+  content_type :json
+  record    = find_ocorrencia!(params[:id])
+  foto_path = save_foto!(params[:id].to_i, params[:foto])
+  halt 422, json(error: 'Arquivo não enviado.') unless foto_path
+
+  DB[:ocorrencias].where(id: params[:id].to_i).update(foto_path: foto_path, updated_at: Time.now)
+  JsonSync.write!
+  json serialize(DB[:ocorrencias].first(id: params[:id].to_i))
 end
 
 # → Rotas — Estatísticas
@@ -216,7 +257,7 @@ get '/api/stats' do
     .order(Sequel.desc(:total))
     .all
 
-  recentes = DB[:ocorrencias].order(Sequel.desc(:created_at)).limit(5).all
+  recentes  = DB[:ocorrencias].order(Sequel.desc(:created_at)).limit(5).all
 
   tendencia = DB[:ocorrencias]
     .select { [strftime('%Y-%m', data_ocorrencia).as(:mes), count(id).as(:total)] }
@@ -238,21 +279,12 @@ end
 # → Rotas — Meta / Health
 get '/api/health' do
   content_type :json
-  json(
-    status:   'ok',
-    database: DB.test_connection ? 'connected' : 'error',
-    version:  '1.0.0',
-    time:     Time.now.iso8601
-  )
+  json(status: 'ok', database: DB.test_connection ? 'connected' : 'error', version: '1.0.0', time: Time.now.iso8601)
 end
 
 get '/api/meta' do
   content_type :json
-  json(
-    cursos:     CURSOS_VALIDOS,
-    anos:       ANOS_VALIDOS,
-    gravidades: GRAVIDADES_VALIDAS
-  )
+  json(cursos: CURSOS_VALIDOS, anos: ANOS_VALIDOS, gravidades: GRAVIDADES_VALIDAS)
 end
 
 # → Rotas — Changelog Git
