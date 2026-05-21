@@ -581,10 +581,38 @@ tbody tr:hover { background: var(--surface); }
 
   table thead { display: none; }
   table, tbody, tr, td { display: block; }
-  tr { border: 1px solid var(--surface-3); border-radius: var(--r); margin-bottom: 10px; }
+  tr { border: 1px solid var(--surface-3); border-radius: var(--r); margin-bottom: 10px; position: relative; overflow: hidden; }
   td { padding: 8px 14px; border-bottom: 1px solid var(--surface-2); }
   td::before { content: attr(data-label); display: block; font-size: .68rem; font-weight: 700; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 2px; }
   td:last-child { border-bottom: none; }
   .td-actions { justify-content: flex-end; }
-  .td-avatar { display: none; }
+
+  .td-avatar {
+    display: block;
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 90px;
+    padding: 0;
+    border: none;
+    background: var(--surface-2);
+    border-left: 1px solid var(--surface-3);
+    border-radius: 0 var(--r) var(--r) 0;
+    overflow: hidden;
+  }
+  .td-avatar::before { display: none; }
+  .td-avatar .table-avatar {
+    width: 100%; height: 100%;
+    border-radius: 0;
+    border: none;
+    object-fit: cover;
+    display: block;
+  }
+  .td-avatar .table-avatar-placeholder {
+    width: 100%; height: 100%;
+    border-radius: 0;
+    border: none;
+    font-size: .85rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  td:not(.td-avatar) { padding-right: 106px; }
 }
