@@ -255,6 +255,20 @@ get '/api/meta' do
   )
 end
 
+# → Rotas — Changelog Git
+get '/api/changelog' do
+  content_type :json
+  raw = `git log --pretty=format:"%H|%h|%s|%an|%ad" --date=short 2>&1`
+  if $?.exitstatus != 0 || raw.strip.empty?
+    halt 503, json(error: 'Repositório git não disponível.')
+  end
+  commits = raw.strip.split("\n").map do |line|
+    hash, short, msg, author, date = line.split('|', 5)
+    { hash: hash, short: short, message: msg, author: author, date: date }
+  end
+  json commits
+end
+
 # → Erros
 error 400 do
   content_type :json
