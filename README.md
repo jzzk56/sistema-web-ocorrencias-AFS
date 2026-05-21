@@ -23,7 +23,6 @@
 | Dashboard com estatísticas | ✅ |
 | Suite de testes automatizados | ✅ |
 
----
 
 ## 🚀 Setup rápido
 
@@ -60,7 +59,6 @@ RACK_ENV=production bundle exec puma config.ru -p 3000
 
 Acesse `http://localhost:3000` no navegador.
 
----
 
 ## 📁 Estrutura do projeto
 
@@ -82,9 +80,7 @@ sistema-ocorrencias/
     └── api_test.rb     # Suite Minitest (cobertura de endpoints)
 ```
 
----
-
-## 🌐 API Reference
+## 🌐 API Referências 
 
 Todos os endpoints retornam `application/json`.  
 Base URL: `http://localhost:3000/api`
@@ -138,7 +134,6 @@ Gravidades válidas: `Leve`, `Média`, `Grave`
 | `GET` | `/meta`   | Listas de cursos, anos e gravidades |
 | `GET` | `/health` | Status da aplicação e do banco |
 
----
 
 ## 🧪 Testes
 
@@ -148,7 +143,6 @@ bundle exec ruby test/api_test.rb
 
 Os testes usam um banco SQLite separado (`db/test.sqlite3`) e arquivo JSON próprio para não interferir nos dados de desenvolvimento.
 
----
 
 ## 🔌 Extensão: Injeção de API externa
 
@@ -177,8 +171,6 @@ end
 # ExternalAPI.notify(DB[:ocorrencias].first(id: id))
 ```
 
----
-
 ## 🗄️ Trocar SQLite por PostgreSQL / MySQL
 
 `database.rb` usa [Sequel](https://sequel.jeremyevans.net/), que suporta múltiplos bancos de dados.  
@@ -199,7 +191,6 @@ gem 'pg'      # PostgreSQL
 gem 'mysql2'  # MySQL
 ```
 
----
 
 ## 📊 Cursos e Turmas disponíveis
 
@@ -210,21 +201,3 @@ gem 'mysql2'  # MySQL
 | Informática | 1º · 2º · 3º |
 | Logística | 1º · 2º · 3º |
 | Desenvolvimento de Sistemas | 1º · 2º · 3º |
-
----
-
-## 🏆 Avaliação
-
-| Critério | Pontos | Cobertura |
-|----------|--------|-----------|
-| Funcionalidade | 35 | CRUD completo, filtros, busca |
-| Persistência | 10 | SQLite + JSON sincronizado |
-| Interface / Usabilidade | 20 | SPA responsiva, sidebar, dashboard |
-| Validações | 10 | Frontend + backend |
-| Qualidade do Código | 15 | Modular, comentado, testado |
-| Criatividade / Extras | 10 | API REST, paginação, stats, testes |
-| **Total** | **100** | |
-
----
-
-> Boa sorte a todos! 🚀
