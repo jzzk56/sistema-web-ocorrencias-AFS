@@ -8,8 +8,7 @@ require 'time'
 require 'rack/cors'
 require_relative 'database'
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
-# Allows any external client (React app, Postman, mobile app) to consume the API.
+# → CORS
 use Rack::Cors do
   allow do
     origins ENV.fetch('CORS_ORIGINS', '*')
@@ -20,7 +19,7 @@ use Rack::Cors do
   end
 end
 
-# ── Configuration ─────────────────────────────────────────────────────────────
+# → Configuração
 configure do
   set :public_folder, File.join(__dir__, 'public')
   set :port,          ENV.fetch('PORT', 3000).to_i
@@ -35,9 +34,8 @@ configure :development do
   also_reload 'database.rb'
 end
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# → Helpers
 helpers do
-  # Parse JSON request body, halt 400 on malformed input
   def json_body
     request.body.rewind
     JSON.parse(request.body.read, symbolize_names: true)
@@ -45,7 +43,6 @@ helpers do
     halt 400, json(error: 'Corpo da requisição com JSON inválido.')
   end
 
-  # Validate occurrence payload; halts with 422 + error list on failure
   def validate_ocorrencia!(params)
     errors = []
 
@@ -76,24 +73,21 @@ helpers do
     halt 422, json(errors: errors) unless errors.empty?
   end
 
-  # Convenience: find or 404
   def find_ocorrencia!(id)
     record = DB[:ocorrencias].first(id: id.to_i)
     halt 404, json(error: 'Ocorrência não encontrada.') unless record
     record
   end
 
-  # Build dataset with optional filters
   def filtered_dataset
     ds = DB[:ocorrencias].order(Sequel.desc(:created_at))
-    ds = ds.where(Sequel.ilike(:nome_aluno, "%#{params[:aluno]}%"))  if params[:aluno]&.length&.positive?
+    ds = ds.where(Sequel.ilike(:nome_aluno, "%#{params[:aluno]}%")) if params[:aluno]&.length&.positive?
     ds = ds.where(curso:     params[:curso])     if params[:curso]&.length&.positive?
     ds = ds.where(ano:       params[:ano])       if params[:ano]&.length&.positive?
     ds = ds.where(gravidade: params[:gravidade]) if params[:gravidade]&.length&.positive?
     ds
   end
 
-  # Serialize datetime fields for JSON output
   def serialize(row_or_rows)
     serialise = ->(row) {
       row.transform_values { |v| v.respond_to?(:iso8601) ? v.iso8601 : v }
@@ -102,17 +96,12 @@ helpers do
   end
 end
 
-# ── SPA Catch-all ─────────────────────────────────────────────────────────────
+# → Rotas — SPA
 get '/' do
   send_file File.join(settings.public_folder, 'index.html')
 end
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  API — Ocorrências
-# ─────────────────────────────────────────────────────────────────────────────
-
-# GET /api/ocorrencias
-# Query params: aluno, curso, ano, gravidade, page, per_page
+# → Rotas — Ocorrências
 get '/api/ocorrencias' do
   content_type :json
 
@@ -122,22 +111,19 @@ get '/api/ocorrencias' do
   page     = [(params[:page] || 1).to_i, 1].max
   offset   = (page - 1) * per_page
 
-  headers 'X-Total-Count'  => total.to_s,
-          'X-Page'         => page.to_s,
-          'X-Per-Page'     => per_page.to_s,
-          'X-Total-Pages'  => (total.to_f / per_page).ceil.to_s
+  headers 'X-Total-Count' => total.to_s,
+          'X-Page'        => page.to_s,
+          'X-Per-Page'    => per_page.to_s,
+          'X-Total-Pages' => (total.to_f / per_page).ceil.to_s
 
-  rows = ds.limit(per_page, offset).all
-  json serialize(rows)
+  json serialize(ds.limit(per_page, offset).all)
 end
 
-# GET /api/ocorrencias/:id
 get '/api/ocorrencias/:id' do
   content_type :json
   json serialize(find_ocorrencia!(params[:id]))
 end
 
-# POST /api/ocorrencias
 post '/api/ocorrencias' do
   content_type :json
   data = json_body
@@ -160,10 +146,9 @@ post '/api/ocorrencias' do
   json serialize(DB[:ocorrencias].first(id: id))
 end
 
-# PUT /api/ocorrencias/:id  (full update)
 put '/api/ocorrencias/:id' do
   content_type :json
-  find_ocorrencia!(params[:id])   # ensure exists
+  find_ocorrencia!(params[:id])
   data = json_body
   validate_ocorrencia!(data)
 
@@ -181,13 +166,12 @@ put '/api/ocorrencias/:id' do
   json serialize(DB[:ocorrencias].first(id: params[:id].to_i))
 end
 
-# PATCH /api/ocorrencias/:id  (partial update)
 patch '/api/ocorrencias/:id' do
   content_type :json
-  record = find_ocorrencia!(params[:id])
-  data   = json_body
-
+  find_ocorrencia!(params[:id])
+  data    = json_body
   updates = {}
+
   %i[nome_aluno curso ano data_ocorrencia descricao gravidade].each do |field|
     updates[field] = data[field].is_a?(String) ? data[field].strip : data[field] if data.key?(field)
   end
@@ -198,7 +182,6 @@ patch '/api/ocorrencias/:id' do
   json serialize(DB[:ocorrencias].first(id: params[:id].to_i))
 end
 
-# DELETE /api/ocorrencias/:id
 delete '/api/ocorrencias/:id' do
   content_type :json
   find_ocorrencia!(params[:id])
@@ -207,16 +190,12 @@ delete '/api/ocorrencias/:id' do
   json message: 'Ocorrência excluída com sucesso.', id: params[:id].to_i
 end
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  API — Stats / Dashboard
-# ─────────────────────────────────────────────────────────────────────────────
-
+# → Rotas — Estatísticas
 get '/api/stats' do
   content_type :json
 
   total = DB[:ocorrencias].count
 
-  # Counts per severity
   por_gravidade = DB[:ocorrencias]
     .select_group(:gravidade)
     .select_append { count(id).as(:total) }
@@ -225,27 +204,23 @@ get '/api/stats' do
       h[r[:gravidade]] = r[:total]
     end
 
-  # Counts per course (sorted desc)
   por_curso = DB[:ocorrencias]
     .select_group(:curso)
     .select_append { count(id).as(:total) }
     .order(Sequel.desc(:total))
     .all
 
-  # Counts per class (course + year)
   por_turma = DB[:ocorrencias]
     .select_group(:curso, :ano)
     .select_append { count(id).as(:total) }
     .order(Sequel.desc(:total))
     .all
 
-  # Last 5 occurrences
   recentes = DB[:ocorrencias].order(Sequel.desc(:created_at)).limit(5).all
 
-  # Monthly trend (last 6 months)
   tendencia = DB[:ocorrencias]
     .select { [strftime('%Y-%m', data_ocorrencia).as(:mes), count(id).as(:total)] }
-    .group { strftime('%Y-%m', data_ocorrencia) }
+    .group  { strftime('%Y-%m', data_ocorrencia) }
     .order(:mes)
     .limit(6)
     .all
@@ -260,10 +235,7 @@ get '/api/stats' do
   )
 end
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  API — Meta / Health
-# ─────────────────────────────────────────────────────────────────────────────
-
+# → Rotas — Meta / Health
 get '/api/health' do
   content_type :json
   json(
@@ -283,10 +255,7 @@ get '/api/meta' do
   )
 end
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Error Handlers
-# ─────────────────────────────────────────────────────────────────────────────
-
+# → Erros
 error 400 do
   content_type :json
   json error: 'Requisição inválida.'
@@ -294,7 +263,6 @@ end
 
 error 404 do
   content_type :json
-  # If request expects HTML (browser navigation), serve SPA
   if request.accept.include?('text/html')
     send_file File.join(settings.public_folder, 'index.html')
   else
@@ -308,7 +276,6 @@ error 405 do
 end
 
 error 422 do
-  # already handled inline with halt + json body
   pass
 end
 
