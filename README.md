@@ -1,11 +1,11 @@
-# 🏫 AFS · Sistema de Ocorrências Escolares
+# AFS · Sistema de Ocorrências Escolares
 
 > 1º Campeonato de Programação da AFS — Desafio Web  
 > Stack: **Ruby · Sinatra · SQLite (Sequel) · Vanilla JS SPA**
 
 ---
 
-## ✨ Funcionalidades
+## Funcionalidades
 
 | Requisito | Status |
 |---|---|
@@ -13,7 +13,8 @@
 | Tela para visualizar todas as ocorrências | ✅ |
 | Filtro por turma (curso + ano) | ✅ |
 | Busca por nome do aluno | ✅ |
-| Todos os campos obrigatórios (nome, curso, ano, data, descrição, gravidade) | ✅ |
+| Todos os campos obrigatórios (nome, matrícula, curso, ano, data, descrição, gravidade) | ✅ |
+| Upload e exibição de foto do aluno | ✅ |
 | Persistência em `ocorrencias.json` | ✅ |
 | Persistência em SQLite (bonus) | ✅ |
 | Validações e mensagens de erro | ✅ |
@@ -24,10 +25,10 @@
 | Suite de testes automatizados | ✅ |
 
 
-## 🚀 Setup rápido
+## Setup rápido
 
 ### Pré-requisitos
-- Ruby ≥ 3.1
+- Ruby >= 3.1
 - Bundler (`gem install bundler`)
 
 ### Instalação
@@ -36,51 +37,50 @@
 git clone <repo-url>
 cd sistema-ocorrencias
 
-# Instalar dependências
+# → Instalar dependências
 bundle install
 
-# Configurar variáveis de ambiente
+# → Configurar variáveis de ambiente
 cp .env.example .env
-# edite .env se necessário (porta, caminhos, etc.)
+# → edite .env se necessário (porta, caminhos, etc.)
 ```
 
 ### Executar
 
 ```bash
-# Modo desenvolvimento (com auto-reload)
+# → Modo desenvolvimento (com auto-reload)
 bundle exec rerun 'ruby app.rb'
 
-# Ou via Rack (Puma)
+# → Ou via Rack (Puma)
 bundle exec rackup config.ru
 
-# Produção
+# → Produção
 RACK_ENV=production bundle exec puma config.ru -p 3000
 ```
 
 Acesse `http://localhost:3000` no navegador.
 
 
-## 📁 Estrutura do projeto
+## Estrutura do projeto
 
 ```
 sistema-ocorrencias/
-├── app.rb              # Sinatra — todas as rotas da API
-├── database.rb         # Sequel / SQLite — schema + JsonSync
-├── config.ru           # Rack entry point (Puma)
-├── Gemfile             # Dependências Ruby
-├── .env.example        # Variáveis de ambiente documentadas
-├── ocorrencias.json    # Gerado automaticamente (sincronizado a cada escrita)
+├── app.rb              # → rotas da API (Sinatra)
+├── database.rb         # → schema + JsonSync (Sequel / SQLite)
+├── config.ru           # → entry point Rack (Puma)
+├── Gemfile             # → dependências Ruby
+├── ocorrencias.json    # → gerado automaticamente (sync a cada escrita)
 ├── db/
-│   └── ocorrencias.sqlite3  # Banco SQLite (gerado automaticamente)
+│   └── ocorrencias.sqlite3   # → banco SQLite (gerado automaticamente)
 ├── public/
-│   ├── index.html      # SPA shell
-│   ├── css/style.css   # Design system completo
-│   └── js/app.js       # Router + API client + todas as páginas
-└── test/
-    └── api_test.rb     # Suite Minitest (cobertura de endpoints)
+│   ├── index.html      # → SPA shell
+│   ├── css/style.css   # → design system
+│   ├── js/app.js       # → router + API client + páginas
+│   └── uploads/        # → fotos dos alunos
+└── api_test.rb         # → suite Minitest
 ```
 
-## 🌐 API Referências 
+## API
 
 Todos os endpoints retornam `application/json`.  
 Base URL: `http://localhost:3000/api`
@@ -89,12 +89,13 @@ Base URL: `http://localhost:3000/api`
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| `GET`    | `/ocorrencias`       | Listar (paginado, filtrável) |
-| `GET`    | `/ocorrencias/:id`   | Buscar por ID |
-| `POST`   | `/ocorrencias`       | Criar nova ocorrência |
-| `PUT`    | `/ocorrencias/:id`   | Atualizar (substituição total) |
-| `PATCH`  | `/ocorrencias/:id`   | Atualizar (parcial) |
-| `DELETE` | `/ocorrencias/:id`   | Excluir |
+| `GET`    | `/ocorrencias`         | Listar (paginado, filtrável) |
+| `GET`    | `/ocorrencias/:id`     | Buscar por ID |
+| `POST`   | `/ocorrencias`         | Criar nova ocorrência |
+| `PUT`    | `/ocorrencias/:id`     | Atualizar (substituição total) |
+| `PATCH`  | `/ocorrencias/:id`     | Atualizar (parcial) |
+| `DELETE` | `/ocorrencias/:id`     | Excluir |
+| `POST`   | `/ocorrencias/:id/foto`| Upload de foto do aluno |
 
 #### Query params de `GET /ocorrencias`
 
@@ -114,6 +115,7 @@ Cabeçalhos de paginação retornados: `X-Total-Count`, `X-Total-Pages`, `X-Page
 ```json
 {
   "nome_aluno":      "João da Silva",
+  "matricula":       "2025001",
   "curso":           "Informática",
   "ano":             "2º Ano",
   "data_ocorrencia": "2025-05-20",
@@ -135,64 +137,37 @@ Gravidades válidas: `Leve`, `Média`, `Grave`
 | `GET` | `/health` | Status da aplicação e do banco |
 
 
-## 🧪 Testes
+## Testes
 
 ```bash
-bundle exec ruby test/api_test.rb
+bundle exec ruby api_test.rb
 ```
 
 Os testes usam um banco SQLite separado (`db/test.sqlite3`) e arquivo JSON próprio para não interferir nos dados de desenvolvimento.
 
 
-## 🔌 Extensão: Injeção de API externa
+## Trocar SQLite por PostgreSQL / MySQL
 
-O `.env.example` já documenta `EXTERNAL_API_URL` e `EXTERNAL_API_KEY`.  
-Para consumir uma API externa (ex.: sistema de alunos, notificações, etc.), adicione um módulo em `app.rb`:
-
-```ruby
-# app.rb — exemplo de integração externa
-require 'net/http'
-require 'uri'
-
-module ExternalAPI
-  BASE = ENV.fetch('EXTERNAL_API_URL', nil)
-  KEY  = ENV.fetch('EXTERNAL_API_KEY', nil)
-
-  def self.notify(ocorrencia)
-    return unless BASE && KEY
-    uri = URI("#{BASE}/notificacoes")
-    Net::HTTP.post(uri, ocorrencia.to_json,
-                   'Content-Type'  => 'application/json',
-                   'Authorization' => "Bearer #{KEY}")
-  end
-end
-
-# Chamar após o insert em POST /api/ocorrencias:
-# ExternalAPI.notify(DB[:ocorrencias].first(id: id))
-```
-
-## 🗄️ Trocar SQLite por PostgreSQL / MySQL
-
-`database.rb` usa [Sequel](https://sequel.jeremyevans.net/), que suporta múltiplos bancos de dados.  
+`database.rb` usa [Sequel](https://sequel.jeremyevans.net/), que suporta múltiplos bancos.  
 Basta mudar a string de conexão no `.env`:
 
 ```bash
-# PostgreSQL
+# → PostgreSQL
 DATABASE_URL=postgres://user:pass@localhost/afs_ocorrencias
 
-# MySQL
+# → MySQL
 DATABASE_URL=mysql2://user:pass@localhost/afs_ocorrencias
 ```
 
 E adicionar a gem correspondente ao `Gemfile`:
 
 ```ruby
-gem 'pg'      # PostgreSQL
-gem 'mysql2'  # MySQL
+gem 'pg'      # → PostgreSQL
+gem 'mysql2'  # → MySQL
 ```
 
 
-## 📊 Cursos e Turmas disponíveis
+## Cursos e Turmas
 
 | Curso | Anos |
 |-------|------|

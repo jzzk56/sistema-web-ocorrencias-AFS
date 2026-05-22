@@ -1,7 +1,7 @@
 # frozen_string_literal: true
-# Run with: bundle exec ruby test/api_test.rb
+# → Execute com: bundle exec ruby test/api_test.rb
 
-ENV['RACK_ENV'] = 'test'
+ENV['RACK_ENV']    = 'test'
 ENV['DATABASE_URL'] = 'db/test.sqlite3'
 ENV['JSON_PATH']    = 'ocorrencias_test.json'
 
@@ -23,7 +23,7 @@ class ApiTest < Minitest::Test
     File.delete(ENV['JSON_PATH']) rescue nil
   end
 
-  # ── Health ──────────────────────────────────────────────────────────────
+  # → Health
   def test_health
     get '/api/health'
     assert_equal 200, last_response.status
@@ -31,7 +31,7 @@ class ApiTest < Minitest::Test
     assert_equal 'ok', body['status']
   end
 
-  # ── Meta ────────────────────────────────────────────────────────────────
+  # → Meta
   def test_meta_returns_constants
     get '/api/meta'
     body = JSON.parse(last_response.body)
@@ -40,7 +40,7 @@ class ApiTest < Minitest::Test
     assert_includes body['gravidades'], 'Grave'
   end
 
-  # ── Create ──────────────────────────────────────────────────────────────
+  # → Create
   def test_create_ocorrencia
     post '/api/ocorrencias', valid_payload.to_json, 'CONTENT_TYPE' => 'application/json'
     assert_equal 201, last_response.status
@@ -71,7 +71,7 @@ class ApiTest < Minitest::Test
     assert_equal 422, last_response.status
   end
 
-  # ── Read ────────────────────────────────────────────────────────────────
+  # → Read
   def test_list_ocorrencias
     2.times { |i| create_record(nome_aluno: "Aluno #{i}") }
     get '/api/ocorrencias'
@@ -117,7 +117,7 @@ class ApiTest < Minitest::Test
     assert_equal 404, last_response.status
   end
 
-  # ── Update ──────────────────────────────────────────────────────────────
+  # → Update
   def test_update_ocorrencia
     id = create_record
     put "/api/ocorrencias/#{id}", valid_payload.merge(gravidade: 'Grave').to_json,
@@ -125,12 +125,12 @@ class ApiTest < Minitest::Test
     assert_equal 200, last_response.status
     body = JSON.parse(last_response.body)
     assert_equal 'Grave', body['gravidade']
-    # Verify JSON sync
+    # → Verificar sync JSON
     json_data = JSON.parse(File.read(ENV['JSON_PATH']))
     assert_equal 'Grave', json_data.first['gravidade']
   end
 
-  # ── Delete ──────────────────────────────────────────────────────────────
+  # → Delete
   def test_delete_ocorrencia
     id = create_record
     delete "/api/ocorrencias/#{id}"
@@ -140,7 +140,7 @@ class ApiTest < Minitest::Test
     assert_empty json_data
   end
 
-  # ── Stats ────────────────────────────────────────────────────────────────
+  # → Stats
   def test_stats
     create_record(gravidade: 'Leve')
     create_record(gravidade: 'Grave')
